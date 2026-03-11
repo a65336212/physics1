@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>带电粒子 · 速度选择器 + 偏转磁场 (动画已修复)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: linear-gradient(145deg, #f5f7fa 0%, #e9ecf0 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(6px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 40px -10px rgba(10,30,50,0.3);
+            padding: 1.8rem 2rem 2rem 2rem;
+            width: fit-content;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        h2 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 500;
+            color: #0b2b3b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        h2 span {
+            background: #1d4f6e;
+            color: white;
+            font-size: 0.8rem;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 28px;
+            background: #ffffffd9;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05), 0 10px 20px rgba(0,20,40,0.2);
+            width: 100%;
+            height: auto;
+            max-width: 1600px;
+            touch-action: none;
+        }
+        .control-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1.2rem;
+            background: #d9e2ec70;
+            padding: 0.8rem 1.5rem;
+            border-radius: 60px;
+            backdrop-filter: blur(4px);
+            border: 1px solid #ffffffaa;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .slider-group label {
+            font-weight: 600;
+            color: #0a3f55;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-group span {
+            background: #0a2a38;
+            color: white;
+            padding: 4px 18px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        input[type=range] {
+            width: 350px;
+            height: 6px;
+            background: linear-gradient(90deg, #106a8f, #42b3d6);
+            border-radius: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px #02304866;
+            border: 2px solid #125d81;
+            cursor: grab;
+            transition: 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #ebf7ff;
+        }
+        .action-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .action-group button {
+            background: #0a3f55;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 8px #032b3b50;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #3182a0;
+        }
+        .action-group button:hover {
+            background: #115f80;
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px #04384570;
+        }
+        .action-group button:active {
+            transform: scale(0.98);
+        }
+        .legend {
+            display: flex;
+            gap: 1.8rem;
+            color: #1a4b63;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 6px;
+            background: #f0b843;
+            opacity: 0.7;
+        }
+        .color-dot.field {
+            background: #a0d2f0;
+            border: 1px solid #2178ae;
+        }
+        .color-dot.mag {
+            background: #f7b977;
+            border: 1px solid #c96f0e;
+        }
+        .color-dot.area {
+            background: #f0a050;
+            border: 1px solid #b45f1a;
+            opacity: 0.4;
+        }
+        footer {
+            text-align: center;
+            margin-top: 0.8rem;
+            color: #34657c;
+            font-size: 0.85rem;
+        }
+        .info-badge {
+            background: #0f3448;
+            color: white;
+            border-radius: 20px;
+            padding: 2px 18px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>
+        ⚡ 速度选择器 + 偏转磁场 · 尺寸加倍 · 动画已修复
+        <span> 1.5 倍偏转半径</span>
+    </h2>
+    <canvas id="fieldCanvas" width="1600" height="800"></canvas>
+
+    <div class="control-panel">
+        <div class="slider-group">
+            <label>
+                <span>🎯 出射位置 Y0</span>
+                <input type="range" id="y0Slider" min="296" max="504" value="400" step="1">
+            </label>
+            <span id="yValue">400 px</span>
+        </div>
+        <div class="action-group">
+            <button id="toggleAreaBtn">🔲 显示面积形状 (动画)</button>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><span class="color-dot"></span> 当前粒子路径 (高亮)</div>
+        <div class="legend-item"><span class="color-dot field"></span> 速度选择器 (E⊥B)</div>
+        <div class="legend-item"><span class="color-dot mag"></span> 偏转磁场 · 双边界</div>
+        <div class="legend-item"><span class="color-dot area"></span> 所有粒子可达区域 (半透明)</div>
+        <div class="info-badge">线状源 · 向右发射</div>
+    </div>
+    <footer>
+        ⚡ 粒子从线状源 → 速度选择器 (仅直线通过) → 垂直磁场偏转，从下边界穿出
+    </footer>
+</div>
+
+<script>
+(function() {
+    const canvas = document.getElementById('fieldCanvas');
+    const ctx = canvas.getContext('2d');
+    const y0Slider = document.getElementById('y0Slider');
+    const yValue = document.getElementById('yValue');
+    const toggleAreaBtn = document.getElementById('toggleAreaBtn');
+
+    // ---------- 固定几何参数 (翻倍) ----------
+    const R = 160;               // 偏转半径 160px
+    const sourceYmin = 280;       // 上边界
+    const sourceYmax = 520;       // 下边界 (高度240 = 1.5*160)
+    const sourceX = 120;          // 线状粒子源
+    const selectorXmin = 160;      // 速度选择器左边界
+    const selectorXmax = 400;      // 速度选择器右边界 / 磁场左边界
+    const fieldXmin = 400;         // 磁场左边界
+    const fieldXmax = 700;         // 磁场右边界 (视觉宽度)
+
+    // 滑块范围 (留余量)
+    const sliderMin = sourceYmin + 16;   // 296
+    const sliderMax = sourceYmax - 16;   // 504
+    y0Slider.min = sliderMin;
+    y0Slider.max = sliderMax;
+    y0Slider.value = 400;
+
+    // 状态变量
+    let showReachableArea = false;       // 是否显示最终完整面积
+    let isAnimating = false;             // 动画是否进行中
+    let animationFrame = null;
+    let scanYMax = sourceYmin;           // 当前扫描到的y坐标 (从上往下)
+
+    // 更新滑块显示
+    function updateYDisplay() {
+        yValue.innerText = y0Slider.value + ' px';
+    }
+    y0Slider.addEventListener('input', updateYDisplay);
+    updateYDisplay();
+
+    // ---------- 绘制单条圆弧 (工具) ----------
+    function drawSingleArc(ctx, y0, style, lineWidth) {
+        const xCenter = fieldXmin;
+        const yCenter = y0 + R;
+        const cosPhi = (yCenter - sourceYmax) / R;
+        const clampedCos = Math.min(1, Math.max(-1, cosPhi));
+        const phiMax = Math.acos(clampedCos);
+        if (phiMax < 1e-6) return;
+
+        ctx.save();
+        ctx.strokeStyle = style;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const steps = 40;
+        for (let i = 0; i <= steps; i++) {
+            const t = (i / steps) * phiMax;
+            const xArc = xCenter + R * Math.sin(t);
+            const yArc = yCenter - R * Math.cos(t);
+            if (i === 0) ctx.moveTo(xArc, yArc);
+            else ctx.lineTo(xArc, yArc);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // ---------- 绘制累积区域 (从 sourceYmin 到 currentYMax) 步长 step=3 提高性能 ----------
+    function drawAccumulatedArea(ctx, currentYMax) {
+        ctx.save();
+        ctx.lineWidth = 3;                 // 加粗一点，更明显
+        ctx.strokeStyle = '#f0a050';
+        ctx.globalAlpha = 0.3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        const startY = sourceYmin;
+        const endY = Math.min(currentYMax, sourceYmax);
+        // 步长设为3，减少每帧绘制量，同时保持视觉连续
+        for (let y0 = startY; y0 <= endY; y0 += 3) {
+            const xCenter = fieldXmin;
+            const yCenter = y0 + R;
+            const cosPhi = (yCenter - sourceYmax) / R;
+            const clampedCos = Math.min(1, Math.max(-1, cosPhi));
+            const phiMax = Math.acos(clampedCos);
+            if (phiMax < 1e-6) continue;
+
+            ctx.beginPath();
+            const steps = 30;
+            for (let i = 0; i <= steps; i++) {
+                const t = (i / steps) * phiMax;
+                const xArc = xCenter + R * Math.sin(t);
+                const yArc = yCenter - R * Math.cos(t);
+                if (i === 0) ctx.moveTo(xArc, yArc);
+                else ctx.lineTo(xArc, yArc);
+            }
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // ---------- 绘制扫描线 (当前扫描位置) ----------
+    function drawScanLine(ctx, yScan) {
+        ctx.save();
+        ctx.strokeStyle = '#f0a050';
+        ctx.lineWidth = 5;
+        ctx.setLineDash([12, 8]);
+        ctx.beginPath();
+        ctx.moveTo(fieldXmin, yScan);
+        ctx.lineTo(fieldXmax, yScan);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // 小箭头
+        ctx.fillStyle = '#f0a050';
+        ctx.beginPath();
+        ctx.arc(fieldXmax + 20, yScan, 10, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // ---------- 绘制完整面积 (无扫描线) ----------
+    function drawFullArea(ctx) {
+        drawAccumulatedArea(ctx, sourceYmax);
+    }
+
+    // ---------- 绘制基础场景 (不含可达面积) ----------
+    function drawBaseScene() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. 半透明网格
+        ctx.save();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        for (let y = 120; y < 720; y += 60) {
+            ctx.moveTo(40, y);
+            ctx.lineTo(1560, y);
+        }
+        for (let x = 80; x < 1520; x += 60) {
+            ctx.moveTo(x, 120);
+            ctx.lineTo(x, 680);
+        }
+        ctx.strokeStyle = '#c0d0dd50';
+        ctx.stroke();
+        ctx.restore();
+
+        // 2. 功能区背景
+        ctx.fillStyle = '#a0d2f030';
+        ctx.strokeStyle = '#2178ae';
+        ctx.lineWidth = 3;
+        ctx.fillRect(selectorXmin, sourceYmin, selectorXmax - selectorXmin, sourceYmax - sourceYmin);
+        ctx.strokeRect(selectorXmin, sourceYmin, selectorXmax - selectorXmin, sourceYmax - sourceYmin);
+
+        ctx.fillStyle = '#f7b97730';
+        ctx.strokeStyle = '#c96f0e';
+        ctx.lineWidth = 4;
+        ctx.fillRect(fieldXmin, sourceYmin, fieldXmax - fieldXmin, sourceYmax - sourceYmin);
+        ctx.strokeRect(fieldXmin, sourceYmin, fieldXmax - fieldXmin, sourceYmax - sourceYmin);
+
+        ctx.save();
+        ctx.strokeStyle = '#b0450e';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 12]);
+        ctx.beginPath();
+        ctx.moveTo(fieldXmin, sourceYmin);
+        ctx.lineTo(fieldXmax, sourceYmin);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(fieldXmin, sourceYmax);
+        ctx.lineTo(fieldXmax, sourceYmax);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        ctx.font = '600 16px "Segoe UI", monospace';
+        ctx.fillStyle = '#1a5875';
+        ctx.fillText('速度选择器', selectorXmin + 20, sourceYmin - 12);
+        ctx.fillStyle = '#b9580b';
+        ctx.fillText('偏转磁场', fieldXmin + 40, sourceYmin - 12);
+        ctx.font = 'bold 16px "Segoe UI"';
+        ctx.fillStyle = '#234c66';
+        ctx.fillText('E', selectorXmin + 80, sourceYmin + 80);
+        ctx.fillText('B', selectorXmin + 200, sourceYmin + 140);
+        ctx.fillStyle = '#ac4f0c';
+        ctx.fillText('B (垂直纸面)', fieldXmin + 80, sourceYmin + 100);
+
+        // 3. 线状粒子源及射线示意
+        ctx.save();
+        ctx.strokeStyle = '#2f5b7a';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(sourceX, sourceYmin);
+        ctx.lineTo(sourceX, sourceYmax);
+        ctx.stroke();
+        ctx.strokeStyle = '#a0b8c9';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 5]);
+        for (let y = sourceYmin + 24; y < sourceYmax; y += 40) {
+            ctx.beginPath();
+            ctx.moveTo(sourceX, y);
+            ctx.lineTo(sourceX + 80, y - 36);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(sourceX, y);
+            ctx.lineTo(sourceX + 80, y + 36);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(sourceX, y);
+            ctx.lineTo(sourceX + 90, y);
+            ctx.strokeStyle = '#3d6c90';
+            ctx.stroke();
+            ctx.strokeStyle = '#a0b8c9';
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 4. 当前粒子路径 (无发光)
+        const y0 = parseFloat(y0Slider.value);
+
+        // 直线部分
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sourceX, y0);
+        ctx.lineTo(selectorXmax, y0);
+        ctx.strokeStyle = '#f0b843cc';
+        ctx.lineWidth = 24;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sourceX, y0);
+        ctx.lineTo(selectorXmax, y0);
+        ctx.strokeStyle = '#a34e0e';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 磁场内圆弧
+        const xCenter = fieldXmin;
+        const yCenter = y0 + R;
+        const cosPhi = (yCenter - sourceYmax) / R;
+        const clampedCos = Math.min(1, Math.max(-1, cosPhi));
+        const phiMax = Math.acos(clampedCos);
+        const xExit = xCenter + R * Math.sin(phiMax);
+        const yExit = sourceYmax;
+
+        if (phiMax > 0.001) {
+            ctx.beginPath();
+            const steps = 40;
+            for (let i = 0; i <= steps; i++) {
+                const t = (i / steps) * phiMax;
+                const xArc = xCenter + R * Math.sin(t);
+                const yArc = yCenter - R * Math.cos(t);
+                if (i === 0) ctx.moveTo(xArc, yArc);
+                else ctx.lineTo(xArc, yArc);
+            }
+            ctx.strokeStyle = '#f0b843bb';
+            ctx.lineWidth = 24;
+            ctx.stroke();
+            ctx.beginPath();
+            for (let i = 0; i <= steps; i++) {
+                const t = (i / steps) * phiMax;
+                const xArc = xCenter + R * Math.sin(t);
+                const yArc = yCenter - R * Math.cos(t);
+                if (i === 0) ctx.moveTo(xArc, yArc);
+                else ctx.lineTo(xArc, yArc);
+            }
+            ctx.strokeStyle = '#b4520e';
+            ctx.lineWidth = 3.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#e3963e';
+            ctx.beginPath();
+            ctx.arc(fieldXmin, y0, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = '#c96f0e';
+            ctx.beginPath();
+            ctx.arc(xExit, yExit, 8, 0, 2 * Math.PI);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#e3963e';
+            ctx.beginPath();
+            ctx.arc(fieldXmin, y0, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // 5. 半径指示
+        ctx.save();
+        ctx.font = '500 16px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#2a4d66';
+        ctx.fillText('粒子源', sourceX-70, sourceYmin-18);
+        ctx.fillStyle = '#8a4c0c';
+        ctx.fillText('下边界', fieldXmax+10, sourceYmax-8);
+        ctx.fillText('上边界', fieldXmax+10, sourceYmin+25);
+        ctx.beginPath();
+        ctx.strokeStyle = '#2f698b';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 6]);
+        ctx.moveTo(xCenter, yCenter);
+        ctx.lineTo(xCenter + R * 0.7, yCenter - R * 0.7);
+        ctx.stroke();
+        ctx.fillStyle = '#1e5975';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText('R=160', xCenter+40, yCenter-40);
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 磁场方向符号
+        ctx.save();
+        ctx.fillStyle = '#a0663c60';
+        ctx.font = '28px "Segoe UI"';
+        for (let xx = fieldXmin+60; xx < fieldXmax-40; xx+=80) {
+            for (let yy = sourceYmin+80; yy < sourceYmax-60; yy+=80) {
+                ctx.fillText('⊗', xx, yy);
+            }
+        }
+        ctx.restore();
+    }
+
+    // ---------- 动画循环 ----------
+    function startAnimation() {
+        if (isAnimating) return;           // 防止重复启动
+        isAnimating = true;
+        scanYMax = sourceYmin;              // 从上边界开始
+
+        function animate() {
+            if (!isAnimating) return;
+
+            // 绘制基础场景
+            drawBaseScene();
+
+            // 绘制累积区域 (到当前扫描位置)
+            drawAccumulatedArea(ctx, scanYMax);
+
+            // 绘制扫描线
+            drawScanLine(ctx, scanYMax);
+
+            // 更新扫描进度
+            if (scanYMax < sourceYmax) {
+                scanYMax += 3;               // 步长与累积绘制步长一致
+                if (scanYMax > sourceYmax) scanYMax = sourceYmax;
+                animationFrame = requestAnimationFrame(animate);
+            } else {
+                // 动画结束，显示完整面积
+                isAnimating = false;
+                showReachableArea = true;
+                toggleAreaBtn.innerHTML = '❌ 隐藏面积形状';
+                // 最后绘制一次完整面积 (无扫描线)
+                drawBaseScene();
+                drawFullArea(ctx);
+            }
+        }
+
+        animationFrame = requestAnimationFrame(animate);
+    }
+
+    function stopAnimation() {
+        if (animationFrame) {
+            cancelAnimationFrame(animationFrame);
+            animationFrame = null;
+        }
+        isAnimating = false;
+    }
+
+    // ---------- 主绘制 (根据状态) ----------
+    function drawScene() {
+        if (isAnimating) {
+            // 动画进行中，由动画循环负责绘制，这里不做任何事以避免冲突
+            return;
+        }
+
+        drawBaseScene();
+
+        if (showReachableArea) {
+            drawFullArea(ctx);
+        }
+    }
+
+    // 按钮点击 - 修复：不再手动设置 isAnimating
+    toggleAreaBtn.addEventListener('click', () => {
+        if (showReachableArea) {
+            // 隐藏完整面积
+            stopAnimation();
+            showReachableArea = false;
+            toggleAreaBtn.innerHTML = '🔲 显示面积形状 (动画)';
+            drawScene();
+        } else {
+            // 开始动画 (如果正在动画则先停止)
+            stopAnimation();
+            // 确保状态重置
+            showReachableArea = false;
+            toggleAreaBtn.innerHTML = '⏳ 扫描中...';
+            startAnimation();  // startAnimation 内部会设置 isAnimating = true 并启动循环
+        }
+    });
+
+    // 滑块拖动时重绘
+    y0Slider.addEventListener('input', () => {
+        if (isAnimating) {
+            // 动画进行中，不需要额外操作，动画循环下一帧会自动使用新 y0
+            // 但为了更流畅，可以什么都不做
+        } else {
+            drawScene();
+        }
+    });
+
+    // 初始绘制
+    drawScene();
+})();
+</script>
+</body>
+</html>
