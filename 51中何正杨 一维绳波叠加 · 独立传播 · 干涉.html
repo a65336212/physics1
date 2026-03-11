@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一维绳波叠加 · 波包与连续波可视化</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #f0f4fa 0%, #dae5f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 40px -10px rgba(0,20,40,0.3), inset 0 0 0 1px rgba(255,255,255,0.6);
+            padding: 30px 30px 40px;
+            max-width: 1200px;
+            width: fit-content;
+            margin: auto;
+        }
+        h2 {
+            margin: 0 0 8px 0;
+            font-weight: 500;
+            color: #1a3350;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        h2 span {
+            background: #1e3a5f;
+            color: white;
+            font-size: 0.8rem;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+        .canvas-container {
+            background: #0b1a2b;
+            border-radius: 28px;
+            padding: 15px;
+            box-shadow: inset 0 -3px 8px #3b5f8e, 0 18px 22px -8px #0b1a2b80;
+        }
+        canvas {
+            display: block;
+            width: 1000px;
+            height: 450px;
+            background: #102433;
+            border-radius: 18px;
+            box-shadow: 0 0 0 2px #6b8fbc, 0 10px 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 28px;
+            justify-content: center;
+        }
+        .panel {
+            background: #eef3fc;
+            border-radius: 2rem;
+            padding: 20px 24px;
+            box-shadow: inset 0 1px 4px white, 0 8px 18px -6px #1f3b5c;
+            flex: 1 1 280px;
+            border: 1px solid #ffffff90;
+        }
+        .panel h3 {
+            margin: 0 0 14px 0;
+            color: #17345c;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #a0c2e8;
+            padding-bottom: 8px;
+        }
+        .slider-group {
+            margin-bottom: 18px;
+        }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            color: #1d3d65;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.2px;
+        }
+        input[type=range] {
+            width: 100%;
+            margin: 8px 0 4px;
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 8px;
+            background: #c1d6f0;
+            border-radius: 20px;
+            border: 1px solid #9bb5da;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            background: #1f4880;
+            border-radius: 50%;
+            margin-top: -7px;
+            border: 2px solid white;
+            box-shadow: 0 2px 6px black;
+            cursor: grab;
+        }
+        .dir-select {
+            display: flex;
+            gap: 20px;
+            margin: 15px 0 10px;
+            background: #d6e4f8;
+            padding: 10px 15px;
+            border-radius: 50px;
+        }
+        .dir-select label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #052244;
+            font-weight: 500;
+        }
+        .mode-bar {
+            display: flex;
+            gap: 20px;
+            background: #d1e1f5;
+            padding: 8px 20px;
+            border-radius: 40px;
+            margin-bottom: 25px;
+            justify-content: center;
+            border: 1px solid white;
+        }
+        .mode-bar label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0f2d51;
+            font-weight: 600;
+        }
+        button {
+            background: #244e7e;
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            box-shadow: 0 5px 0 #0e2640, 0 6px 16px #00000050;
+            cursor: pointer;
+            transition: 0.07s;
+            border: 1px solid #86afe6;
+            letter-spacing: 0.5px;
+        }
+        button:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #0e2640, 0 6px 16px black;
+        }
+        .legend {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 22px;
+            color: #1f3f6b;
+            font-weight: 600;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-dot {
+            width: 20px;
+            height: 4px;
+            border-radius: 4px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 18px;
+            color: #34598b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>
+        🌊 一维绳波叠加 · 独立传播 · 干涉 · 波包
+        <span>可调参数</span>
+    </h2>
+    <div class="canvas-container">
+        <canvas id="waveCanvas" width="1000" height="450"></canvas>
+    </div>
+
+    <!-- 模式切换 -->
+    <div class="mode-bar">
+        <label>
+            <input type="radio" name="mode" value="continuous" checked> 两列连续波（可调方向/波长）
+        </label>
+        <label>
+            <input type="radio" name="mode" value="wavepacket"> 两个波包相向运动 + 边界反射
+        </label>
+    </div>
+
+    <div class="controls">
+        <!-- 波1 控制卡 -->
+        <div class="panel">
+            <h3>🔵 波 1</h3>
+            <div class="slider-group">
+                <label>振幅 <span id="amp1Val">1.00</span></label>
+                <input type="range" id="amp1" min="0" max="1.8" value="1.0" step="0.02">
+            </div>
+            <div class="slider-group">
+                <label>波长 <span id="wl1Val">4.00</span></label>
+                <input type="range" id="wl1" min="1.5" max="12" value="4.5" step="0.1">
+            </div>
+            <div class="dir-select" id="dir1Group">
+                <label><input type="radio" name="dir1" value="right" checked> ➡️ 向右</label>
+                <label><input type="radio" name="dir1" value="left"> ⬅️ 向左</label>
+            </div>
+        </div>
+
+        <!-- 波2 控制卡 -->
+        <div class="panel">
+            <h3>🔴 波 2</h3>
+            <div class="slider-group">
+                <label>振幅 <span id="amp2Val">0.80</span></label>
+                <input type="range" id="amp2" min="0" max="1.8" value="0.8" step="0.02">
+            </div>
+            <div class="slider-group">
+                <label>波长 <span id="wl2Val">3.00</span></label>
+                <input type="range" id="wl2" min="1.5" max="12" value="3.8" step="0.1">
+            </div>
+            <div class="dir-select" id="dir2Group">
+                <label><input type="radio" name="dir2" value="right"> ➡️ 向右</label>
+                <label><input type="radio" name="dir2" value="left" checked> ⬅️ 向左</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局速度 + 动画控制 -->
+    <div style="display: flex; gap: 30px; justify-content: center; align-items: center; margin-top: 20px; flex-wrap: wrap;">
+        <div style="width: 300px;">
+            <label style="color: #1d3d65; font-weight: 600;">⏩ 波速 <span id="speedVal">1.00</span></label>
+            <input type="range" id="speed" min="0.2" max="2.2" value="1.0" step="0.05">
+        </div>
+        <button id="playPauseBtn">⏸️ 暂停</button>
+        <button id="resetBtn">↺ 重置位置 (波包模式)</button>
+    </div>
+
+    <!-- 图例 -->
+    <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background: #3a9eff;"></span> 波1 (蓝色)</div>
+        <div class="legend-item"><span class="legend-dot" style="background: #ff5e6b;"></span> 波2 (红色)</div>
+        <div class="legend-item"><span class="legend-dot" style="background: white; height: 3px; box-shadow: 0 0 10px white;"></span> 叠加波 (白色)</div>
+        <div class="legend-item"><span style="color:#ccc;">⚫ 节点/相消</span></div>
+    </div>
+    <footer>叠加原理 · 独立传播 · 相遇时振幅相加 · 波包反射后继续运动</footer>
+</div>
+
+<script>
+    (function() {
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width, height = canvas.height;
+
+        // 物理参数
+        let amp1 = 1.0, amp2 = 0.8;
+        let wl1 = 4.5, wl2 = 3.8;    // 波长
+        let dir1 = 1;                 // 1: 右, -1: 左
+        let dir2 = -1;
+        let speed = 1.0;              // 波速大小
+
+        // 模式: 'continuous' 或 'wavepacket'
+        let mode = 'continuous';
+
+        // 波包状态变量 (位置, 速度)
+        let xc1 = 5.0;     // 波包1 中心位置 (初始靠左)
+        let xc2 = 15.0;    // 波包2 中心位置 (初始靠右)
+        let v1 = 1.0;      // 波包1速度 (+向右)
+        let v2 = -1.0;     // 波包2速度 (-向左)
+
+        // 时间变量 (用于连续波模式)
+        let t = 0.0;
+
+        // 动画控制
+        let animId = null;
+        let isPlaying = true;
+        const dt = 0.06;    // 时间步长 (每帧增量)
+
+        // 坐标映射
+        const xMin = 0, xMax = 20;      // 展示区间 0～20
+        const yMin = -2.8, yMax = 2.8;
+
+        function mapX(physX) {
+            return (physX - xMin) / (xMax - xMin) * width;
+        }
+        function mapY(physY) {
+            return height - ((physY - yMin) / (yMax - yMin) * height); // 翻转y轴: canvas y向下
+        }
+
+        // 获取DOM元素
+        const amp1Slider = document.getElementById('amp1');
+        const amp2Slider = document.getElementById('amp2');
+        const wl1Slider = document.getElementById('wl1');
+        const wl2Slider = document.getElementById('wl2');
+        const speedSlider = document.getElementById('speed');
+        const amp1Span = document.getElementById('amp1Val');
+        const amp2Span = document.getElementById('amp2Val');
+        const wl1Span = document.getElementById('wl1Val');
+        const wl2Span = document.getElementById('wl2Val');
+        const speedSpan = document.getElementById('speedVal');
+        const dir1Radios = document.getElementsByName('dir1');
+        const dir2Radios = document.getElementsByName('dir2');
+        const modeRadios = document.getElementsByName('mode');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // 初始化事件监听
+        function updateSlidersReadout() {
+            amp1 = parseFloat(amp1Slider.value);
+            amp2 = parseFloat(amp2Slider.value);
+            wl1 = parseFloat(wl1Slider.value);
+            wl2 = parseFloat(wl2Slider.value);
+            speed = parseFloat(speedSlider.value);
+            amp1Span.innerText = amp1.toFixed(2);
+            amp2Span.innerText = amp2.toFixed(2);
+            wl1Span.innerText = wl1.toFixed(2);
+            wl2Span.innerText = wl2.toFixed(2);
+            speedSpan.innerText = speed.toFixed(2);
+
+            for (let radio of dir1Radios) {
+                if (radio.checked) dir1 = radio.value === 'right' ? 1 : -1;
+            }
+            for (let radio of dir2Radios) {
+                if (radio.checked) dir2 = radio.value === 'right' ? 1 : -1;
+            }
+        }
+
+        amp1Slider.addEventListener('input', updateSlidersReadout);
+        amp2Slider.addEventListener('input', updateSlidersReadout);
+        wl1Slider.addEventListener('input', updateSlidersReadout);
+        wl2Slider.addEventListener('input', updateSlidersReadout);
+        speedSlider.addEventListener('input', updateSlidersReadout);
+        for (let radio of dir1Radios) radio.addEventListener('change', updateSlidersReadout);
+        for (let radio of dir2Radios) radio.addEventListener('change', updateSlidersReadout);
+
+        // 模式切换: 改变控件可用状态 + 重置波包位置
+        for (let radio of modeRadios) {
+            radio.addEventListener('change', (e) => {
+                mode = e.target.value;
+                // 连续波模式下启用方向控件，波包模式下禁用方向并重置位置
+                const dir1Group = document.getElementById('dir1Group');
+                const dir2Group = document.getElementById('dir2Group');
+                if (mode === 'continuous') {
+                    dir1Group.style.opacity = '1';
+                    dir2Group.style.opacity = '1';
+                    dir1Radios.forEach(r => r.disabled = false);
+                    dir2Radios.forEach(r => r.disabled = false);
+                } else {
+                    dir1Group.style.opacity = '0.5';
+                    dir2Group.style.opacity = '0.5';
+                    dir1Radios.forEach(r => r.disabled = true);
+                    dir2Radios.forEach(r => r.disabled = true);
+                    // 重置波包位置
+                    resetWavePackets();
+                }
+            });
+        }
+
+        // 重置波包位置 (中心)
+        function resetWavePackets() {
+            xc1 = 5.0;
+            xc2 = 15.0;
+            v1 = 1.0;   // 波包1向右
+            v2 = -1.0;  // 波包2向左
+        }
+
+        resetBtn.addEventListener('click', () => {
+            resetWavePackets();
+        });
+
+        // 暂停/播放
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.innerHTML = isPlaying ? '⏸️ 暂停' : '▶️ 播放';
+        });
+
+        // 工具函数： 反射边界处理 (用于波包)
+        function reflectBoundary(xc, v, L=20) {
+            let newXc = xc;
+            let newV = v;
+            const margin = 0.2; // 避免卡边界
+            if (newXc <= 0) {
+                newXc = -newXc;          // 镜像弹回
+                newV = Math.abs(v);       // 改为向右
+            } else if (newXc >= L) {
+                newXc = 2 * L - newXc;    // 镜像
+                newV = -Math.abs(v);       // 改为向左
+            }
+            // 防止极端情况卡在边界
+            if (newXc < 0) newXc = 0.1;
+            if (newXc > L) newXc = L - 0.1;
+            return { xc: newXc, v: newV };
+        }
+
+        // 绘制一帧
+        function draw() {
+            updateSlidersReadout(); // 刷新滑块数值
+
+            ctx.clearRect(0, 0, width, height);
+
+            // 绘制背景网格 (浅暗线)
+            ctx.strokeStyle = '#2b4a6e';
+            ctx.lineWidth = 0.6;
+            for (let y = -2; y <= 2; y+=1) {
+                ctx.beginPath();
+                ctx.moveTo(0, mapY(y));
+                ctx.lineTo(width, mapY(y));
+                ctx.strokeStyle = '#1f3b5a';
+                ctx.stroke();
+            }
+            for (let x = 0; x <= 20; x+=2) {
+                ctx.beginPath();
+                ctx.moveTo(mapX(x), 0);
+                ctx.lineTo(mapX(x), height);
+                ctx.strokeStyle = '#1f3b5a';
+                ctx.stroke();
+            }
+
+            // 准备x点 (200个点)
+            const points = 400;
+            const xs = [];
+            for (let i = 0; i <= points; i++) {
+                xs.push(xMin + (i / points) * (xMax - xMin));
+            }
+
+            // 计算波1, 波2, 合成波的y值 (物理坐标)
+            let y1s = [], y2s = [], ySum = [];
+
+            // 根据模式计算
+            if (mode === 'continuous') {
+                // 两列连续正弦波
+                const k1 = (2 * Math.PI) / wl1;
+                const k2 = (2 * Math.PI) / wl2;
+                const w1 = k1 * speed;  // omega = k * v
+                const w2 = k2 * speed;
+
+                xs.forEach(x => {
+                    // 波1: sin(kx - dir*wt)  方向: dir=+1 向右 => 使用 kx - wt ; dir=-1 向左 => kx + wt
+                    let phase1 = k1 * x - dir1 * w1 * t;
+                    let y1 = amp1 * Math.sin(phase1);
+
+                    let phase2 = k2 * x - dir2 * w2 * t;
+                    let y2 = amp2 * Math.sin(phase2);
+
+                    y1s.push(y1);
+                    y2s.push(y2);
+                    ySum.push(y1 + y2);
+                });
+            } else {
+                // 波包模式: 高斯包络 * 正弦, 使用状态变量 xc1, xc2
+                const k1 = (2 * Math.PI) / wl1;
+                const k2 = (2 * Math.PI) / wl2;
+                const widthPack = 1.6;  // 高斯宽度
+
+                xs.forEach(x => {
+                    // 波包1: 高斯包络 *  sin(k1*(x - xc1))  振幅由amp1缩放
+                    let env1 = Math.exp(-Math.pow((x - xc1) / widthPack, 2));
+                    let y1 = amp1 * env1 * Math.sin(k1 * (x - xc1));
+
+                    // 波包2
+                    let env2 = Math.exp(-Math.pow((x - xc2) / widthPack, 2));
+                    let y2 = amp2 * env2 * Math.sin(k2 * (x - xc2));
+
+                    y1s.push(y1);
+                    y2s.push(y2);
+                    ySum.push(y1 + y2);
+                });
+            }
+
+            // 绘制三条曲线 (顺序: 叠加最上层)
+            // 先绘制波1、波2 (半透明), 再绘制叠加波(实线加粗)
+            function drawCurve(ys, color, lineWidth = 2, dashed = false) {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                if (dashed) ctx.setLineDash([8, 5]);
+                else ctx.setLineDash([]);
+                let first = true;
+                for (let i = 0; i <= points; i++) {
+                    const physX = xs[i];
+                    const physY = ys[i];
+                    const canvasX = mapX(physX);
+                    const canvasY = mapY(physY);
+                    if (first) {
+                        ctx.moveTo(canvasX, canvasY);
+                        first = false;
+                    } else {
+                        ctx.lineTo(canvasX, canvasY);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            // 波1 蓝色半透明
+            drawCurve(y1s, '#3a9eff', 2.2);
+            // 波2 红色半透明
+            drawCurve(y2s, '#ff5e6b', 2.2);
+            // 叠加波 白色加粗
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3.8;
+            ctx.shadowColor = '#b0e0ff';
+            ctx.shadowBlur = 12;
+            let first = true;
+            for (let i = 0; i <= points; i++) {
+                const canvasX = mapX(xs[i]);
+                const canvasY = mapY(ySum[i]);
+                if (first) { ctx.moveTo(canvasX, canvasY); first = false; }
+                else { ctx.lineTo(canvasX, canvasY); }
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 绘制中轴线 y=0 灰色虚线
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.strokeStyle = '#6b8fbc';
+            ctx.lineWidth = 1.2;
+            ctx.moveTo(0, mapY(0));
+            ctx.lineTo(width, mapY(0));
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 动画循环
+        function animate() {
+            if (isPlaying) {
+                // 更新时间/位置
+                if (mode === 'continuous') {
+                    t += dt * speed;  // 速度通过滑块调节步长
+                } else {
+                    // 波包模式: 更新中心位置 (带反射)
+                    xc1 += v1 * dt * speed;
+                    xc2 += v2 * dt * speed;
+
+                    // 边界反射 (范围0～20)
+                    let r1 = reflectBoundary(xc1, v1, 20);
+                    xc1 = r1.xc; v1 = r1.v;
+                    let r2 = reflectBoundary(xc2, v2, 20);
+                    xc2 = r2.xc; v2 = r2.v;
+
+                    // 避免两个波包完全重叠时黏连，无额外处理
+                }
+            }
+            draw();
+            animId = requestAnimationFrame(animate);
+        }
+
+        // 启动动画
+        animate();
+
+        // 窗口失焦时减少性能消耗（可选）
+        window.addEventListener('beforeunload', () => {
+            if (animId) cancelAnimationFrame(animId);
+        });
+
+        // 手动触发一次刷新
+        updateSlidersReadout();
+        resetWavePackets();  // 初始波包位置
+    })();
+</script>
+</body>
+</html>
